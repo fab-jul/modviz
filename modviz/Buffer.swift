@@ -7,10 +7,11 @@
 
 /*
  
- 
+Use a linked list to make a simple shifting buffer. We efficiently support
+ - appending on the right
+ - reading the whole list into a array
  
  */
-
 
 private class Node<T> {
     var value: T
@@ -43,8 +44,10 @@ struct ShiftingBuffer<T> {
     }
     
     mutating func append(_ element: T) {
+        // Pop an element from the left.
         guard let newStart = self.start.next else { fatalError() }
         self.start = newStart
+        // Append at the right
         self.end.next = Node<T>(value: element)
         self.end = self.end.next!
     }
