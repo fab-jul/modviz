@@ -10,7 +10,6 @@ struct UniformData {
     var color: SIMD3<Float>
 }
 
-let fftSize = 1024
 
 class ViewController: NSViewController, MTKViewDelegate {
 
@@ -24,7 +23,7 @@ class ViewController: NSViewController, MTKViewDelegate {
     var rotation: Float = 0
 
     var audioFile: AVAudioFile?
-    var audioBuffer = [Float](repeating: 0, count: 1024)
+    var audioBuffer: ShiftingBuffer<Float>!
 
     let bassFrequencyRange: ClosedRange<Float> = 20...200  // Adjust as needed
     let bassThreshold: Float = 40  // Adjust this value based on your audio and desired sensitivity
@@ -33,11 +32,10 @@ class ViewController: NSViewController, MTKViewDelegate {
     let normalColor = SIMD3<Float>(0.5, 0.8, 0.9)  // Example: A blueish color
     var isBassDetected = false
     var timeSinceBassHit: Float = 0.0
-
-    var realIn = [Float](repeating: 0, count: fftSize)
-    var imagIn = [Float](repeating: 0, count: fftSize)
-    var realOut = [Float](repeating: 0, count: fftSize)
-    var imagOut = [Float](repeating: 0, count: fftSize)
+    
+    // This works out for audio of 44.1kHz and 60FPS (== 735 audio frames per video frame)
+    // We will stock this as a rolling buffer (?)
+    let fftSize = 1024
 
     var audioPlayer: AVAudioPlayer?
 
@@ -81,6 +79,8 @@ class ViewController: NSViewController, MTKViewDelegate {
 
     override func viewDidLoad() {
         assert(metalView == nil)
+        audioBuffer = ShiftingBuffer<Float>(size: fftSize, defaultValue: 0.0)
+        
         super.viewDidLoad()
 
         // Create the Metal device
@@ -186,21 +186,35 @@ class ViewController: NSViewController, MTKViewDelegate {
         // Respond to drawable size changes (e.g., window resize)
     }
 
-    func audioStuff() {
-        guard let audioFile = self.audioFile else { return }
-
-        // Read audio samples into the buffer
-        let audioFormat = audioFile.processingFormat
-        let numFramesToRead = AVAudioFrameCount(
-            min(
-                audioBuffer.count,
-                Int(audioFile.length - audioFile.framePosition)))
-        if numFramesToRead != fftSize {
-            print("\(numFramesToRead) != \(fftSize)")
+    func fetchAudio(timePassedInSec: TimeInterval) {
+        guard let audioFile = self.audioFile else {
+            // TODO: print warning or sth
             return
         }
 
-        print("Reading \(numFramesToRead) frames: \(isBassDetected)")
+        // Read audio samples into the buffer
+        let audioFormat = audioFile.processingFormat
+        let sampleRate = Float(audioFile.fileFormat.sampleRate)
+        let numFramesToRead = AVAudioFrameCount((Float(timePassedInSec) * sampleRate).rounded(.up))
+        if numFramesToRead > fftSize {
+            print("WARN: Will drop frames, requested \(numFramesToRead)")
+        }
+        
+        let frequencyResolution = sampleRate / Float(fftSize)
+        
+        if Int(audioFile.length - audioFile.framePosition) < fftSize {
+//        let numFramesToRead = AVAudioFrameCount(
+//            min(
+//                fftSize,
+//                // TODO: Rewrite as conditional
+//                Int(audioFile.length - audioFile.framePosition)))
+//        if numFramesToRead != fftSize {
+            // TODO: probably means audio is done. should stop playback
+            print("Error: Could not load requested frames. \(numFramesToRead) != \(fftSize)")
+            return
+        }
+
+        print("Reading \(numFramesToRead) frames")
         let buffer = AVAudioPCMBuffer(
             pcmFormat: audioFormat, frameCapacity: numFramesToRead)!
         try! audioFile.read(into: buffer, frameCount: numFramesToRead)
@@ -211,7 +225,7 @@ class ViewController: NSViewController, MTKViewDelegate {
 
         // Convert audio data to float array
         for i in 0..<Int(numFramesToRead) {
-            audioBuffer[i] = buffer.floatChannelData![0][i]
+            audioBuffer.append(buffer.floatChannelData![0][i])
         }
 
         // Create FFT setup
@@ -225,12 +239,12 @@ class ViewController: NSViewController, MTKViewDelegate {
 
         // Perform FFT
         // Create the buffers for FFT input/output
-        var forwardInputReal = [Float](repeating: 0, count: Int(fftSize))
+        var forwardInputReal = audioBuffer.get()
         // Perform FFT using vDSP
         // Fill realIn with audioBuffer data (windowing might be needed here)
-        for i in 0..<fftSize {
-            forwardInputReal[i] = audioBuffer[i]
-        }
+//        for i in 0..<fftSize {
+//            forwardInputReal[i] = audioBuffer[i]
+//        }
         var forwardInputImag = [Float](repeating: 0, count: Int(fftSize))
         var forwardOutputReal = [Float](repeating: 0, count: Int(fftSize))
         var forwardOutputImag = [Float](repeating: 0, count: Int(fftSize))
@@ -266,9 +280,6 @@ class ViewController: NSViewController, MTKViewDelegate {
             }
         }
 
-        let sampleRate = Float(audioFile.fileFormat.sampleRate)
-        let frequencyResolution = sampleRate / Float(fftSize)
-
         let bassStartIndex = Int(
             bassFrequencyRange.lowerBound / frequencyResolution)
         let bassEndIndex = Int(
@@ -295,7 +306,7 @@ class ViewController: NSViewController, MTKViewDelegate {
         guard let drawable = view.currentDrawable else { return }
 
         let currentTime = CACurrentMediaTime()
-        let deltaTime = currentTime - lastDrawTime
+        let deltaTime: TimeInterval = currentTime - lastDrawTime
         lastDrawTime = currentTime
         print("\(deltaTime)")
 
@@ -318,7 +329,7 @@ class ViewController: NSViewController, MTKViewDelegate {
                 descriptor: renderPassDescriptor!)
         else { return }
 
-        audioStuff()
+        fetchAudio(timePassedInSec: deltaTime)
         updateUniforms()
 
         //        renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
