@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1F3ABC302D3BBA9D0095890E /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F3ABC2F2D3BBA9D0095890E /* Accelerate.framework */; };
 		1FCFD8D42D3BB0F400E1419C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FCFD8D32D3BB0F400E1419C /* Metal.framework */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1F3ABC2F2D3BBA9D0095890E /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		1FCFD8A42D3BB0CB00E1419C /* modviz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = modviz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1FCFD8B52D3BB0CD00E1419C /* modvizTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = modvizTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1FCFD8BF2D3BB0CD00E1419C /* modvizUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = modvizUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,6 +60,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1FCFD8D42D3BB0F400E1419C /* Metal.framework in Frameworks */,
+				1F3ABC302D3BBA9D0095890E /* Accelerate.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +105,7 @@
 		1FCFD8D22D3BB0F400E1419C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1F3ABC2F2D3BBA9D0095890E /* Accelerate.framework */,
 				1FCFD8D32D3BB0F400E1419C /* Metal.framework */,
 			);
 			name = Frameworks;

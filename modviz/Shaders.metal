@@ -6,18 +6,20 @@ using namespace metal;
 //    return vertices[vid];
 //}
 
-fragment float4 fragment_shader() {
-    return float4(1.0, 0.0, 0.0, 1.0); // Red color
+// Uniform data structure (must match the Swift struct)
+struct UniformData {
+    float rotation;
+    float3 color; // Use float3 for SIMD3<Float>
+};
+
+fragment float4 fragment_shader(constant UniformData &uniforms [[buffer(1)]]) {
+    // Use the color from the uniforms
+    return float4(uniforms.color, 1.0);
 }
 
 
-// Structure to hold uniform data (like rotation)
-struct Uniforms {
-    float rotation;
-};
-
 vertex float4 vertex_shader(constant float4 *vertices [[buffer(0)]],
-                           constant Uniforms &uniforms [[buffer(1)]],
+                           constant UniformData &uniforms [[buffer(1)]],
                            uint vid [[vertex_id]]) {
     float angle = uniforms.rotation;
 
